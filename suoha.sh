@@ -41,23 +41,27 @@ then
 fi
 
 function quicktunnel(){
-rm -rf xray cloudflared-linux xray.zip
+rm -rf warp xray cloudflared-linux xray.zip
 case "$(uname -m)" in
 	x86_64 | x64 | amd64 )
-	wget https://github.com/XTLS/Xray-core/releases/download/v1.6.5/Xray-linux-64.zip -O xray.zip
+	wget https://raw.githubusercontent.com/fscarmen/warp/main/endpoint/warp-linux-amd64 -O warp
+	wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip -O xray.zip
 	wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared-linux
 	;;
 	i386 | i686 )
-	wget https://github.com/XTLS/Xray-core/releases/download/v1.6.5/Xray-linux-32.zip -O xray.zip
+	wget https://raw.githubusercontent.com/fscarmen/warp/main/endpoint/warp-linux-386 -O warp
+	wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-32.zip -O xray.zip
 	wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-386 -O cloudflared-linux
 	;;
 	armv8 | arm64 | aarch64 )
 	echo arm64
-	wget https://github.com/XTLS/Xray-core/releases/download/v1.6.5/Xray-linux-arm64-v8a.zip -O xray.zip
+	wget https://raw.githubusercontent.com/fscarmen/warp/main/endpoint/warp-linux-arm64 -O warp
+	wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-arm64-v8a.zip -O xray.zip
 	wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 -O cloudflared-linux
 	;;
-	arm71 )
-	wget https://github.com/XTLS/Xray-core/releases/download/v1.6.5/Xray-linux-arm32-v7a.zip -O xray.zip
+	armv71 )
+	wget https://raw.githubusercontent.com/fscarmen/warp/main/endpoint/warp-linux-arm -O warp
+	wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-arm32-v7a.zip -O xray.zip
 	wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm -O cloudflared-linux
 	;;
 	* )
@@ -65,12 +69,20 @@ case "$(uname -m)" in
 	exit
 	;;
 esac
-chmod +x cloudflared-linux
+chmod +x warp cloudflared-linux
 unzip -d xray xray.zip
 rm -rf xray.zip
 uuid=$(cat /proc/sys/kernel/random/uuid)
 urlpath=$(echo $uuid | awk -F- '{print $1}')
 port=$[$RANDOM+10000]
+if [ $warpmode == 1 ]
+then
+	cfwarp
+	warp=$(grep -v timeout result.csv | sed -n '2p' | awk -F, '{print $1}')
+	rm -rf warp ip.txt result.csv
+else
+	rm -rf warp
+fi
 if [ $protocol == 1 ]
 then
 if [ $warpmode == 0 ]
@@ -150,19 +162,24 @@ cat>xray/config.json<<EOF
 		{
 			"protocol": "wireguard",
 			"settings": {
-				"secretKey": "OoyvpkySqdnZgGnjpVuD9HqUJ5lJiu8ZWo+cMI+/c00=",
+				"secretKey": "EHrd4siTqbQUlhLjf/gYr03EB9WHQjYsfJuFcs8UAVM=",
 				"address": [
-					"172.16.0.2/32"
+					"172.16.0.2/32",
+					"2606:4700:110:8839:135f:4927:2002:981/128"
 				],
 				"peers": [
 					{
 						"publicKey": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
 						"AllowedIPs": [
-							"0.0.0.0/0"
+							"0.0.0.0/0",
+                            "::/0"
 						],
-						"endpoint": "$warp"
+						"endpoint": "$warp",
+						"keepAlive": 1
 					}
-				]
+				],
+				"reserved": [0,0,0],
+				"mtu": 1450
 			}
 		}
 	],
@@ -260,19 +277,24 @@ cat>xray/config.json<<EOF
 		{
 			"protocol": "wireguard",
 			"settings": {
-				"secretKey": "OoyvpkySqdnZgGnjpVuD9HqUJ5lJiu8ZWo+cMI+/c00=",
+				"secretKey": "EHrd4siTqbQUlhLjf/gYr03EB9WHQjYsfJuFcs8UAVM=",
 				"address": [
-					"172.16.0.2/32"
+					"172.16.0.2/32",
+					"2606:4700:110:8839:135f:4927:2002:981/128"
 				],
 				"peers": [
 					{
 						"publicKey": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
 						"AllowedIPs": [
-							"0.0.0.0/0"
+							"0.0.0.0/0",
+                            "::/0"
 						],
-						"endpoint": "$warp"
+						"endpoint": "$warp",
+						"keepAlive": 1
 					}
-				]
+				],
+				"reserved": [0,0,0],
+				"mtu": 1450
 			}
 		}
 	],
@@ -323,23 +345,27 @@ echo -e '\n'信息已经保存在 v2ray.txt,再次查看请运行 cat v2ray.txt
 function installtunnel(){
 #创建主目录
 mkdir -p /opt/suoha/ >/dev/null 2>&1
-rm -rf xray cloudflared-linux xray.zip
+rm -rf warp xray cloudflared-linux xray.zip
 case "$(uname -m)" in
 	x86_64 | x64 | amd64 )
-	wget https://github.com/XTLS/Xray-core/releases/download/v1.6.5/Xray-linux-64.zip -O xray.zip
+	wget https://raw.githubusercontent.com/fscarmen/warp/main/endpoint/warp-linux-amd64 -O warp
+	wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip -O xray.zip
 	wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared-linux
 	;;
 	i386 | i686 )
-	wget https://github.com/XTLS/Xray-core/releases/download/v1.6.5/Xray-linux-32.zip -O xray.zip
+	wget https://raw.githubusercontent.com/fscarmen/warp/main/endpoint/warp-linux-386 -O warp
+	wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-32.zip -O xray.zip
 	wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-386 -O cloudflared-linux
 	;;
 	armv8 | arm64 | aarch64 )
 	echo arm64
-	wget https://github.com/XTLS/Xray-core/releases/download/v1.6.5/Xray-linux-arm64-v8a.zip -O xray.zip
+	wget https://raw.githubusercontent.com/fscarmen/warp/main/endpoint/warp-linux-arm64 -O warp
+	wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-arm64-v8a.zip -O xray.zip
 	wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 -O cloudflared-linux
 	;;
-	arm71 )
-	wget https://github.com/XTLS/Xray-core/releases/download/v1.6.5/Xray-linux-arm32-v7a.zip -O xray.zip
+	armv71 )
+	wget https://raw.githubusercontent.com/fscarmen/warp/main/endpoint/warp-linux-arm -O warp
+	wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-arm32-v7a.zip -O xray.zip
 	wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm -O cloudflared-linux
 	;;
 	* )
@@ -348,13 +374,21 @@ case "$(uname -m)" in
 	;;
 esac
 unzip -d xray xray.zip
-chmod +x cloudflared-linux xray/xray
+chmod +x warp cloudflared-linux xray/xray
 mv cloudflared-linux /opt/suoha/
 mv xray/xray /opt/suoha/
 rm -rf xray xray.zip
 uuid=$(cat /proc/sys/kernel/random/uuid)
 urlpath=$(echo $uuid | awk -F- '{print $1}')
 port=$[$RANDOM+10000]
+if [ $warpmode == 1 ]
+then
+	cfwarp
+	warp=$(grep -v timeout result.csv | sed -n '2p' | awk -F, '{print $1}')
+	rm -rf warp ip.txt result.csv
+else
+	rm -rf warp
+fi
 if [ $protocol == 1 ]
 then
 if [ $warpmode == 0 ]
@@ -434,19 +468,24 @@ cat>/opt/suoha/config.json<<EOF
 		{
 			"protocol": "wireguard",
 			"settings": {
-				"secretKey": "OoyvpkySqdnZgGnjpVuD9HqUJ5lJiu8ZWo+cMI+/c00=",
+				"secretKey": "EHrd4siTqbQUlhLjf/gYr03EB9WHQjYsfJuFcs8UAVM=",
 				"address": [
-					"172.16.0.2/32"
+					"172.16.0.2/32",
+					"2606:4700:110:8839:135f:4927:2002:981/128"
 				],
 				"peers": [
 					{
 						"publicKey": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
 						"AllowedIPs": [
-							"0.0.0.0/0"
+							"0.0.0.0/0",
+                            "::/0"
 						],
-						"endpoint": "$warp"
+						"endpoint": "$warp",
+						"keepAlive": 1
 					}
-				]
+				],
+				"reserved": [0,0,0],
+				"mtu": 1450
 			}
 		}
 	],
@@ -544,19 +583,24 @@ cat>/opt/suoha/config.json<<EOF
 		{
 			"protocol": "wireguard",
 			"settings": {
-				"secretKey": "OoyvpkySqdnZgGnjpVuD9HqUJ5lJiu8ZWo+cMI+/c00=",
+				"secretKey": "EHrd4siTqbQUlhLjf/gYr03EB9WHQjYsfJuFcs8UAVM=",
 				"address": [
-					"172.16.0.2/32"
+					"172.16.0.2/32",
+					"2606:4700:110:8839:135f:4927:2002:981/128"
 				],
 				"peers": [
 					{
 						"publicKey": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
 						"AllowedIPs": [
-							"0.0.0.0/0"
+							"0.0.0.0/0",
+                            "::/0"
 						],
-						"endpoint": "$warp"
+						"endpoint": "$warp",
+						"keepAlive": 1
 					}
-				]
+				],
+				"reserved": [0,0,0],
+				"mtu": 1450
 			}
 		}
 	],
@@ -776,6 +820,98 @@ chmod +x /opt/suoha/suoha.sh
 ln -sf /opt/suoha/suoha.sh /usr/bin/suoha
 }
 
+function cfwarp(){
+if [ $ips == 4 ]
+then
+	n=0
+	iplist=100
+	while true
+	do
+		temp[$n]=$(echo 162.159.192.$(($RANDOM%256)))
+		n=$[$n+1]
+		if [ $n -ge $iplist ]
+		then
+			break
+		fi
+		temp[$n]=$(echo 162.159.193.$(($RANDOM%256)))
+		n=$[$n+1]
+		if [ $n -ge $iplist ]
+		then
+			break
+		fi
+		temp[$n]=$(echo 162.159.195.$(($RANDOM%256)))
+		n=$[$n+1]
+		if [ $n -ge $iplist ]
+		then
+			break
+		fi
+	done
+	while true
+	do
+		if [ $(echo ${temp[@]} | sed -e 's/ /\n/g' | sort -u | wc -l) -ge $iplist ]
+		then
+			break
+		else
+			temp[$n]=$(echo 162.159.192.$(($RANDOM%256)))
+			n=$[$n+1]
+		fi
+		if [ $(echo ${temp[@]} | sed -e 's/ /\n/g' | sort -u | wc -l) -ge $iplist ]
+		then
+			break
+		else
+			temp[$n]=$(echo 162.159.193.$(($RANDOM%256)))
+			n=$[$n+1]
+		fi
+		if [ $(echo ${temp[@]} | sed -e 's/ /\n/g' | sort -u | wc -l) -ge $iplist ]
+		then
+			break
+		else
+			temp[$n]=$(echo 162.159.195.$(($RANDOM%256)))
+			n=$[$n+1]
+		fi
+	done
+else
+	n=0
+	iplist=100
+	while true
+	do
+		temp[$n]=$(echo [2606:4700:d0::$(printf '%x\n' $(($RANDOM*2+$RANDOM%2))):$(printf '%x\n' $(($RANDOM*2+$RANDOM%2))):$(printf '%x\n' $(($RANDOM*2+$RANDOM%2))):$(printf '%x\n' $(($RANDOM*2+$RANDOM%2)))])
+		n=$[$n+1]
+		if [ $n -ge $iplist ]
+		then
+			break
+		fi
+		temp[$n]=$(echo [2606:4700:d1::$(printf '%x\n' $(($RANDOM*2+$RANDOM%2))):$(printf '%x\n' $(($RANDOM*2+$RANDOM%2))):$(printf '%x\n' $(($RANDOM*2+$RANDOM%2))):$(printf '%x\n' $(($RANDOM*2+$RANDOM%2)))])
+		n=$[$n+1]
+		if [ $n -ge $iplist ]
+		then
+			break
+		fi
+	done
+	while true
+	do
+		if [ $(echo ${temp[@]} | sed -e 's/ /\n/g' | sort -u | wc -l) -ge $iplist ]
+		then
+			break
+		else
+			temp[$n]=$(echo [2606:4700:d0::$(printf '%x\n' $(($RANDOM*2+$RANDOM%2))):$(printf '%x\n' $(($RANDOM*2+$RANDOM%2))):$(printf '%x\n' $(($RANDOM*2+$RANDOM%2))):$(printf '%x\n' $(($RANDOM*2+$RANDOM%2)))])
+			n=$[$n+1]
+		fi
+		if [ $(echo ${temp[@]} | sed -e 's/ /\n/g' | sort -u | wc -l) -ge $iplist ]
+		then
+			break
+		else
+			temp[$n]=$(echo [2606:4700:d1::$(printf '%x\n' $(($RANDOM*2+$RANDOM%2))):$(printf '%x\n' $(($RANDOM*2+$RANDOM%2))):$(printf '%x\n' $(($RANDOM*2+$RANDOM%2))):$(printf '%x\n' $(($RANDOM*2+$RANDOM%2)))])
+			n=$[$n+1]
+		fi
+	done
+fi
+echo ${temp[@]} | sed -e 's/ /\n/g' | sort -u>ip.txt
+ulimit -n 102400
+./warp
+clear
+}
+
 clear
 echo 梭哈模式不需要自己提供域名,使用CF ARGO QUICK TUNNEL创建快速链接
 echo 梭哈模式在重启或者脚本再次运行后失效,如果需要使用需要再次运行创建
@@ -816,11 +952,6 @@ then
 	then
 		echo 请输入正确的argo连接模式
 		exit
-	elif [ $ips == 4 ]
-	then
-		warp=162.159.192.0:4500
-	else
-		warp=[2606:4700:d0::]:4500
 	fi
 	read -p "是否需要套WARP(默认0.否,1.是):" warpmode
 	if [ -z "$warpmode" ]
@@ -835,7 +966,7 @@ then
 	fi
 	kill -9 $(ps -ef | grep xray | grep -v grep | awk '{print $2}') >/dev/null 2>&1
 	kill -9 $(ps -ef | grep cloudflared-linux | grep -v grep | awk '{print $2}') >/dev/null 2>&1
-	rm -rf xray cloudflared-linux v2ray.txt
+	rm -rf warp xray cloudflared-linux v2ray.txt
 	quicktunnel
 elif [ $mode == 2 ]
 then
@@ -858,11 +989,6 @@ then
 	then
 		echo 请输入正确的argo连接模式
 		exit
-	elif [ $ips == 4 ]
-	then
-		warp=162.159.192.0:4500
-	else
-		warp=[2606:4700:d0::]:4500
 	fi
 	read -p "是否需要套WARP(默认0.否,1.是):" warpmode
 	if [ -z "$warpmode" ]
@@ -901,7 +1027,7 @@ elif [ $mode == 4 ]
 then
 	kill -9 $(ps -ef | grep xray | grep -v grep | awk '{print $2}') >/dev/null 2>&1
 	kill -9 $(ps -ef | grep cloudflared-linux | grep -v grep | awk '{print $2}') >/dev/null 2>&1
-	rm -rf xray cloudflared-linux v2ray.txt
+	rm -rf warp xray cloudflared-linux v2ray.txt
 else
 	echo 退出成功
 	exit
